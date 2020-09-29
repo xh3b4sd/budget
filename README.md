@@ -1,2 +1,3 @@
 # budget
-error budget and retry handling
+
+Error budget and retry handling.
