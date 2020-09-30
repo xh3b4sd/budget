@@ -31,8 +31,8 @@ type Constant struct {
 }
 
 func NewConstant(config ConstantConfig) (*Constant, error) {
-	if config.Budget < 0 {
-		return nil, tracer.Maskf(invalidConfigError, "%T.Budget must not be negative", config.Budget)
+	if config.Budget < 1 {
+		return nil, tracer.Maskf(invalidConfigError, "%T.Budget must be greater than zero", config.Budget)
 	}
 	if config.Duration < 0 {
 		return nil, tracer.Maskf(invalidConfigError, "%T.Duration must not be negative", config.Duration)
@@ -47,17 +47,21 @@ func NewConstant(config ConstantConfig) (*Constant, error) {
 }
 
 func (c *Constant) Execute(o func() error) error {
+	b := c.budget
+
 	for {
 		err := o()
-		if _, ok := err.(Stop); ok {
+		if err == nil {
 			return nil
-		} else if err != nil {
-			return tracer.Mask(err)
 		}
 
-		c.budget--
-		if c.budget == 0 {
+		if _, ok := err.(Stop); ok {
 			return nil
+		}
+
+		b--
+		if b <= 0 {
+			return tracer.Mask(err)
 		}
 
 		<-time.After(c.duration)
